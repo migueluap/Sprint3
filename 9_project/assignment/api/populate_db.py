@@ -21,7 +21,7 @@ initial_connection_url = (
 
 print(initial_connection_url)
 
-conn = None
+#conn = None
 
 # Connect to PostgreSQL to create the database if it doesn't exist
 try:

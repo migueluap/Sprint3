@@ -12,13 +12,19 @@ from tensorflow.keras.preprocessing import image
 # TODO
 # Connect to Redis and assign to variable `db``
 # Make use of settings.py module to get Redis settings like host, port, etc.
-db = None
+db = redis.Redis(
+    host=settings.REDIS_IP,
+    port=settings.REDIS_PORT,
+    db=settings.REDIS_DB_ID
+)
 
 # TODO
 # Load your ML model and assign to variable `model`
 # See https://drive.google.com/file/d/1ADuBSE4z2ZVIdn66YDSwxKv-58U7WEOn/view?usp=sharing
 # for more information about how to use this model.
-model = None
+
+# Load pre-trained ResNet50 model with weights trained on ImageNet
+model = ResNet50(weights='imagenet')
 
 
 def predict(image_name):
@@ -37,18 +43,42 @@ def predict(image_name):
         Model predicted class as a string and the corresponding confidence
         score as a number.
     """
-    class_name = None
-    pred_probability = None
-    # TODO: Implement the code to predict the class of the image_name
+
+    #class_name = None
+    #pred_probability = None
+
+     # TODO: Implement the code to predict the class of the image_name
 
     # Load image
 
     # Apply preprocessing (convert to numpy array, match model input dimensions (including batch) and use the resnet50 preprocessing)
 
     # Get predictions using model methods and decode predictions using resnet50 decode_predictions
-    _, class_name, pred_probability = None
+    ##_, class_name, pred_probability = None
 
     # Convert probabilities to float and round it
+
+    ##return class_name, pred_probability
+
+    # Load image
+    img_path = os.path.join(settings.UPLOAD_FOLDER, image_name)
+    img = image.load_img(img_path, target_size=(224, 224))
+
+    # Apply preprocessing
+    x = image.img_to_array(img)
+    x = np.expand_dims(x, axis=0)
+    x = preprocess_input(x)
+
+    # Get predictions
+    preds = model.predict(x)
+    decoded_preds = decode_predictions(preds, top=1)[0]
+    
+    # Get class name and probability
+    _, class_name, pred_probability = decoded_preds[0]
+    
+    # Convert probability to float and round
+    pred_probability = float(pred_probability)
+    pred_probability = round(pred_probability, 4)
 
     return class_name, pred_probability
 
@@ -65,7 +95,7 @@ def classify_process():
     received, then, run our ML model to get predictions.
     """
     while True:
-        # Inside this loop you should add the code to:
+         # Inside this loop you should add the code to:
         #   1. Take a new job from Redis
         #   2. Run your ML model on the given data
         #   3. Store model prediction in a dict with the following shape:
@@ -80,18 +110,39 @@ def classify_process():
         #       code with Redis making use of functions `brpop()` and `set()`.
         # TODO
         # Take a new job from Redis
-
         # Decode the JSON data for the given job
-
         # Important! Get and keep the original job ID
-
         # Run the loaded ml model (use the predict() function)
-
         # Prepare a new JSON with the results
-        output = {"prediction": None, "score": None}
-
+        #output = {"prediction": None, "score": None}
         # Store the job results on Redis using the original
         # job ID as the key
+        # Sleep for a bit
+        #time.sleep(settings.SERVER_SLEEP)	
+
+
+        # Take a new job from Redis
+        #queue_name = settings.REDIS_QUEUE
+        ret = db.brpop(settings.REDIS_QUEUE)
+
+        # Decode the JSON data for the given job
+        job_data = json.loads(ret[1])
+        
+        # Get and keep the original job ID
+        job_id = job_data["id"]
+        image_name = job_data["image_name"]
+
+        # Run the loaded ml model (use the predict() function)
+        pred_class, pred_score = predict(image_name)
+
+        # Prepare a new JSON with the results
+        output = {
+            "prediction": pred_class,
+            "score": pred_score
+        }
+
+        # Store the job results on Redis using the original job ID as the key
+        db.set(job_id, json.dumps(output))
 
         # Sleep for a bit
         time.sleep(settings.SERVER_SLEEP)
