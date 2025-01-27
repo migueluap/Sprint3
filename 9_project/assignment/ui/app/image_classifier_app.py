@@ -37,7 +37,7 @@ def login(username: str, password: str) -> Optional[str]:
     # Construct API endpoint URL
     login_url = f"{API_BASE_URL}/login"
 
-    st.write(f"Attempting to connect to: {login_url}")
+    # st.write(f"Attempting to connect to: {login_url}")
     # Set up headers
     headers = {
         "accept": "application/json",
@@ -162,8 +162,8 @@ def send_feedback(
         )
 
         # Check if response is successful
-        if response.status_code != 200:
-            st.error(f"Error sending feedback: {response.status_code} - {response.text}")
+        # if response.status_code != 200:
+        #     st.error(f"Error sending feedback: {response.status_code} - {response.text}")
 
         return response
 
